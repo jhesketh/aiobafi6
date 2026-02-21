@@ -29,6 +29,20 @@ from .protoprop import (
     to_proto_temperature,
 )
 
+NIGHTLIGHT_COLOR_MAP: dict[int, str] = {
+    1: "Red",
+    2: "Green",
+    3: "Blue",
+    4: "Teal",
+    5: "Yellow",
+    6: "Purple",
+    7: "White",
+    8: "Orange",
+    9: "Pink",
+}
+NIGHTLIGHT_COLOR_MIN = 1
+NIGHTLIGHT_COLOR_MAX = 9
+
 __all__ = (
     "VOLATILE_PROPERTIES",
     "Device",

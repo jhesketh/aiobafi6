@@ -162,6 +162,8 @@ message Capabilities {
 // toggling enabled/disabled changes 83.2, and adjusting the nightlight
 // brightness slider changes 83.3.
 message NightlightProperties {
+  // 1=Red, 2=Green, 3=Blue, 4=Teal, 5=Yellow, 6=Purple, 7=White,
+  // 8=Orange, 9=Pink. Values >=10 turn the light off; 0 is ignored.
   optional int32 color = 1;
   optional bool enabled = 2;
   optional int32 brightness_percent = 3;

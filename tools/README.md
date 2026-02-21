@@ -37,9 +37,9 @@ python tools/fan_tui.py MyFan.local
   updates from other clients appear immediately without polling.
 - Adjusting fan speed or light brightness while in AUTO mode automatically
   switches the mode to ON, matching the behaviour of the official app.
-- Nightlight color presets map the known Android app colors (Red, Orange,
-  Yellow, Green, Teal, Purple, Pink) to their raw protocol values. Three
-  additional raw values (3, 7, 10) are exposed for experimentation.
+- Nightlight color supports 9 values: Red (1), Green (2), Blue (3),
+  Teal (4), Yellow (5), Purple (6), White (7), Orange (8), Pink (9).
+  The BAF Android app exposes 7 of these, omitting Blue and White.
 - Smart Mix speed changes are accepted by the fan. The BAF Android app may
   not reflect them until it is restarted; this appears to be a limitation
   of the app rather than the firmware.

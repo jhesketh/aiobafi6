@@ -28,19 +28,19 @@ from textual.widgets import (
     TabbedContent,
 )
 
-from aiobafi6 import PORT, Device, OffOnAuto, Service
+from aiobafi6 import (
+    NIGHTLIGHT_COLOR_MAP,
+    NIGHTLIGHT_COLOR_MAX,
+    NIGHTLIGHT_COLOR_MIN,
+    PORT,
+    Device,
+    OffOnAuto,
+    Service,
+)
 
 NIGHTLIGHT_COLORS = [
-    (1, "Red"),
-    (8, "Orange"),
-    (5, "Yellow"),
-    (2, "Green"),
-    (4, "Teal"),
-    (6, "Purple"),
-    (9, "Pink"),
-    (3, "?3"),
-    (7, "?7"),
-    (10, "?10"),
+    (v, NIGHTLIGHT_COLOR_MAP[v])
+    for v in (1, 8, 5, 2, 4, 3, 6, 7, 9)
 ]
 
 
@@ -444,9 +444,9 @@ class FanApp(App):
                     id="nl-bright-bar",
                 )
                 yield ValueBar(
-                    "Color (raw)",
-                    min_val=1,
-                    max_val=10,
+                    "Color",
+                    min_val=NIGHTLIGHT_COLOR_MIN,
+                    max_val=NIGHTLIGHT_COLOR_MAX,
                     step=1,
                     bar_id="nl-color",
                     id="nl-color-bar",

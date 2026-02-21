@@ -25,10 +25,10 @@ python tools/fan_tui.py MyFan.local
 
 | Tab | Controls |
 |---|---|
-| **Fan** | Mode (OFF/ON/AUTO), speed (0–7), whoosh, eco, reverse, live RPM |
-| **Light** | Mode (OFF/ON/AUTO), brightness, color temperature, dim-to-warm |
+| **Fan** | Mode (OFF/ON/AUTO), speed, whoosh, eco, reverse. Comfort settings (auto comfort, ideal temperature, min/max speed, heat assist). Motion sense and return-to-auto with timeouts. |
+| **Light** | Mode (OFF/ON/AUTO), brightness, color temperature, dim-to-warm. Motion timeout and return-to-auto with timeouts. |
 | **Nightlight** | Enable/disable, brightness, color presets and raw value slider |
-| **Sensors** | Temperature, humidity, fan/light occupancy (read-only) |
+| **Sensors** | Temperature, humidity, RPM (current/target), fan/light occupancy (read-only) |
 | **Settings** | LED indicators, fan beep, IR remote |
 
 ### Notes

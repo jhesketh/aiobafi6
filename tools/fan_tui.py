@@ -6,7 +6,7 @@ import argparse
 import asyncio
 import socket
 import sys
-from typing import Optional
+from typing import Callable, Optional
 
 from textual import on, work
 from textual.app import App, ComposeResult
@@ -44,6 +44,16 @@ NIGHTLIGHT_COLORS = [
 ]
 
 
+def _fmt_duration(seconds: int) -> str:
+    if seconds < 60:
+        return f"{seconds}s"
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
+    if h:
+        return f"{h}h {m}m" if m else f"{h}h"
+    return f"{m}m"
+
+
 # ---------------------------------------------------------------------------
 # Custom compound widget: labeled value bar with +/- controls
 # ---------------------------------------------------------------------------
@@ -66,6 +76,7 @@ class ValueBar(Static):
         step: int = 1,
         unit: str = "",
         bar_id: str | None = None,
+        formatter: Optional[Callable[[int], str]] = None,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
@@ -75,6 +86,7 @@ class ValueBar(Static):
         self._step = step
         self._unit = unit
         self._bar_id = bar_id or self.id or "bar"
+        self._formatter = formatter
         self._suppress = False
 
     def compose(self) -> ComposeResult:
@@ -96,6 +108,8 @@ class ValueBar(Static):
             )
 
     def _format(self, v: int) -> str:
+        if self._formatter:
+            return self._formatter(v)
         return f"{v}{self._unit}"
 
     def watch_value(self, new_value: int) -> None:
@@ -285,10 +299,76 @@ class FanApp(App):
                 with Horizontal(classes="toggle-row"):
                     yield Label("Reverse")
                     yield Switch(id="reverse-sw")
-                yield Rule()
-                with Horizontal(classes="info-row"):
-                    yield Label("RPM:", classes="vb-label")
-                    yield Label("--", id="rpm-label")
+
+                yield Label("Comfort", classes="section-title")
+                with Horizontal(classes="toggle-row"):
+                    yield Label("Auto Comfort")
+                    yield Switch(id="comfort-sw")
+                yield ValueBar(
+                    "Ideal Temp",
+                    min_val=10,
+                    max_val=35,
+                    step=1,
+                    unit="°C",
+                    bar_id="comfort-temp",
+                    id="comfort-temp-bar",
+                )
+                yield ValueBar(
+                    "Min Speed",
+                    min_val=0,
+                    max_val=7,
+                    step=1,
+                    bar_id="comfort-min",
+                    id="comfort-min-bar",
+                )
+                yield ValueBar(
+                    "Max Speed",
+                    min_val=0,
+                    max_val=7,
+                    step=1,
+                    bar_id="comfort-max",
+                    id="comfort-max-bar",
+                )
+                with Horizontal(classes="toggle-row"):
+                    yield Label("Heat Assist")
+                    yield Switch(id="heat-assist-sw")
+                yield ValueBar(
+                    "Heat Assist Speed",
+                    min_val=0,
+                    max_val=7,
+                    step=1,
+                    bar_id="heat-speed",
+                    id="heat-speed-bar",
+                )
+                with Horizontal(classes="toggle-row"):
+                    yield Label("Heat Assist Rev.")
+                    yield Switch(id="heat-reverse-sw")
+
+                yield Label("Motion & Auto", classes="section-title")
+                with Horizontal(classes="toggle-row"):
+                    yield Label("Motion Sense")
+                    yield Switch(id="motion-sw")
+                yield ValueBar(
+                    "Motion Timeout",
+                    min_val=0,
+                    max_val=10800,
+                    step=60,
+                    bar_id="motion-timeout",
+                    id="motion-timeout-bar",
+                    formatter=_fmt_duration,
+                )
+                with Horizontal(classes="toggle-row"):
+                    yield Label("Return to Auto")
+                    yield Switch(id="rta-sw")
+                yield ValueBar(
+                    "RTA Timeout",
+                    min_val=0,
+                    max_val=10800,
+                    step=60,
+                    bar_id="rta-timeout",
+                    id="rta-timeout-bar",
+                    formatter=_fmt_duration,
+                )
 
             with TabPane("Light", id="tab-light"):
                 yield ModeSelector("Mode", sel_id="light-mode", id="light-mode-sel")
@@ -314,6 +394,29 @@ class FanApp(App):
                 with Horizontal(classes="toggle-row"):
                     yield Label("Dim to Warm")
                     yield Switch(id="dtw-sw")
+
+                yield Label("Motion & Auto", classes="section-title")
+                yield ValueBar(
+                    "Motion Timeout",
+                    min_val=0,
+                    max_val=10800,
+                    step=60,
+                    bar_id="light-motion-timeout",
+                    id="light-motion-timeout-bar",
+                    formatter=_fmt_duration,
+                )
+                with Horizontal(classes="toggle-row"):
+                    yield Label("Return to Auto")
+                    yield Switch(id="light-rta-sw")
+                yield ValueBar(
+                    "RTA Timeout",
+                    min_val=0,
+                    max_val=10800,
+                    step=60,
+                    bar_id="light-rta-timeout",
+                    id="light-rta-timeout-bar",
+                    formatter=_fmt_duration,
+                )
 
             with TabPane("Nightlight", id="tab-nightlight"):
                 with Horizontal(classes="toggle-row"):
@@ -350,6 +453,9 @@ class FanApp(App):
                 with Horizontal(classes="info-row"):
                     yield Label("Humidity:", classes="vb-label")
                     yield Label("--", id="humidity-label")
+                with Horizontal(classes="info-row"):
+                    yield Label("RPM:", classes="vb-label")
+                    yield Label("--", id="rpm-label")
                 with Horizontal(classes="info-row"):
                     yield Label("Occupancy (fan):", classes="vb-label")
                     yield Label("--", id="fan-occ-label")
@@ -465,12 +571,42 @@ class FanApp(App):
         if rev is not None:
             self.query_one("#reverse-sw", Switch).value = rev
 
-        rpm = dev.current_rpm
-        target = dev.target_rpm
-        rpm_text = f"{rpm}" if rpm is not None else "--"
-        if target is not None:
-            rpm_text += f" / target {target}"
-        self.query_one("#rpm-label", Label).update(rpm_text)
+        # Comfort
+        ac = dev.auto_comfort_enable
+        if ac is not None:
+            self.query_one("#comfort-sw", Switch).value = ac
+        ideal = dev.comfort_ideal_temperature
+        if ideal is not None:
+            self.query_one("#comfort-temp-bar", ValueBar).set_value_quiet(int(round(ideal)))
+        cmin = dev.comfort_min_speed
+        if cmin is not None:
+            self.query_one("#comfort-min-bar", ValueBar).set_value_quiet(cmin)
+        cmax = dev.comfort_max_speed
+        if cmax is not None:
+            self.query_one("#comfort-max-bar", ValueBar).set_value_quiet(cmax)
+        ha = dev.comfort_heat_assist_enable
+        if ha is not None:
+            self.query_one("#heat-assist-sw", Switch).value = ha
+        has_ = dev.comfort_heat_assist_speed
+        if has_ is not None:
+            self.query_one("#heat-speed-bar", ValueBar).set_value_quiet(has_)
+        har = dev.comfort_heat_assist_reverse_enable
+        if har is not None:
+            self.query_one("#heat-reverse-sw", Switch).value = har
+
+        # Motion & return to auto
+        ms = dev.motion_sense_enable
+        if ms is not None:
+            self.query_one("#motion-sw", Switch).value = ms
+        mst = dev.motion_sense_timeout
+        if mst is not None:
+            self.query_one("#motion-timeout-bar", ValueBar).set_value_quiet(mst)
+        rta = dev.return_to_auto_enable
+        if rta is not None:
+            self.query_one("#rta-sw", Switch).value = rta
+        rtat = dev.return_to_auto_timeout
+        if rtat is not None:
+            self.query_one("#rta-timeout-bar", ValueBar).set_value_quiet(rtat)
 
     def _refresh_light(self, dev: Device) -> None:
         if not dev.has_any_light:
@@ -507,6 +643,16 @@ class FanApp(App):
         if dtw is not None:
             self.query_one("#dtw-sw", Switch).value = dtw
 
+        lmt = dev.light_auto_motion_timeout
+        if lmt is not None:
+            self.query_one("#light-motion-timeout-bar", ValueBar).set_value_quiet(lmt)
+        lrta = dev.light_return_to_auto_enable
+        if lrta is not None:
+            self.query_one("#light-rta-sw", Switch).value = lrta
+        lrtat = dev.light_return_to_auto_timeout
+        if lrtat is not None:
+            self.query_one("#light-rta-timeout-bar", ValueBar).set_value_quiet(lrtat)
+
     def _refresh_nightlight(self, dev: Device) -> None:
         if not dev.has_nightlight:
             try:
@@ -540,6 +686,12 @@ class FanApp(App):
         hum = dev.humidity
         if hum is not None:
             self.query_one("#humidity-label", Label).update(f"{hum}%")
+        rpm = dev.current_rpm
+        target = dev.target_rpm
+        rpm_text = f"{rpm}" if rpm is not None else "--"
+        if target is not None:
+            rpm_text += f" / target {target}"
+        self.query_one("#rpm-label", Label).update(rpm_text)
         fan_occ = dev.fan_occupancy_detected
         if fan_occ is not None:
             self.query_one("#fan-occ-label", Label).update("Yes" if fan_occ else "No")
@@ -588,6 +740,22 @@ class FanApp(App):
             if dev.light_mode is not None and OffOnAuto(dev.light_mode) != OffOnAuto.ON:
                 dev.light_mode = OffOnAuto.ON
             dev.light_color_temperature = event.value
+        elif wid == "comfort-temp-bar":
+            dev.comfort_ideal_temperature = float(event.value)
+        elif wid == "comfort-min-bar":
+            dev.comfort_min_speed = event.value
+        elif wid == "comfort-max-bar":
+            dev.comfort_max_speed = event.value
+        elif wid == "heat-speed-bar":
+            dev.comfort_heat_assist_speed = event.value
+        elif wid == "motion-timeout-bar":
+            dev.motion_sense_timeout = event.value
+        elif wid == "rta-timeout-bar":
+            dev.return_to_auto_timeout = event.value
+        elif wid == "light-motion-timeout-bar":
+            dev.light_auto_motion_timeout = event.value
+        elif wid == "light-rta-timeout-bar":
+            dev.light_return_to_auto_timeout = event.value
         elif wid == "nl-bright-bar":
             dev.nightlight_brightness_percent = event.value
         elif wid == "nl-color-bar":
@@ -613,7 +781,13 @@ class FanApp(App):
             "whoosh-sw": "whoosh_enable",
             "eco-sw": "eco_enable",
             "reverse-sw": "reverse_enable",
+            "comfort-sw": "auto_comfort_enable",
+            "heat-assist-sw": "comfort_heat_assist_enable",
+            "heat-reverse-sw": "comfort_heat_assist_reverse_enable",
+            "motion-sw": "motion_sense_enable",
+            "rta-sw": "return_to_auto_enable",
             "dtw-sw": "light_dim_to_warm_enable",
+            "light-rta-sw": "light_return_to_auto_enable",
             "nl-enabled-sw": "nightlight_enabled",
             "led-sw": "led_indicators_enable",
             "beep-sw": "fan_beep_enable",

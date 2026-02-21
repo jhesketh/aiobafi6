@@ -369,6 +369,18 @@ class FanApp(App):
                     id="rta-timeout-bar",
                     formatter=_fmt_duration,
                 )
+                yield Label("Unoccupied", classes="section-title")
+                with Horizontal(classes="toggle-row"):
+                    yield Label("Smart Mix")
+                    yield Switch(id="smartmix-sw")
+                yield ValueBar(
+                    "Smart Mix Speed",
+                    min_val=1,
+                    max_val=7,
+                    step=1,
+                    bar_id="smartmix-speed",
+                    id="smartmix-speed-bar",
+                )
 
             with TabPane("Light", id="tab-light"):
                 yield ModeSelector("Mode", sel_id="light-mode", id="light-mode-sel")
@@ -608,6 +620,14 @@ class FanApp(App):
         if rtat is not None:
             self.query_one("#rta-timeout-bar", ValueBar).set_value_quiet(rtat)
 
+        # Smart Mix / unoccupied behavior
+        sme = dev.smart_mix_enable
+        if sme is not None:
+            self.query_one("#smartmix-sw", Switch).value = sme
+        sms = dev.smart_mix_speed
+        if sms is not None:
+            self.query_one("#smartmix-speed-bar", ValueBar).set_value_quiet(sms)
+
     def _refresh_light(self, dev: Device) -> None:
         if not dev.has_any_light:
             try:
@@ -740,6 +760,8 @@ class FanApp(App):
             if dev.light_mode is not None and OffOnAuto(dev.light_mode) != OffOnAuto.ON:
                 dev.light_mode = OffOnAuto.ON
             dev.light_color_temperature = event.value
+        elif wid == "smartmix-speed-bar":
+            dev.smart_mix_speed = event.value
         elif wid == "comfort-temp-bar":
             dev.comfort_ideal_temperature = float(event.value)
         elif wid == "comfort-min-bar":
@@ -786,6 +808,7 @@ class FanApp(App):
             "heat-reverse-sw": "comfort_heat_assist_reverse_enable",
             "motion-sw": "motion_sense_enable",
             "rta-sw": "return_to_auto_enable",
+            "smartmix-sw": "smart_mix_enable",
             "dtw-sw": "light_dim_to_warm_enable",
             "light-rta-sw": "light_return_to_auto_enable",
             "nl-enabled-sw": "nightlight_enabled",

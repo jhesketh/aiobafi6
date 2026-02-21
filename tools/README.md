@@ -33,12 +33,15 @@ python tools/fan_tui.py MyFan.local
 
 ### Notes
 
-- The fan pushes state changes over the persistent TCP connection, so updates
-  from other clients appear immediately without polling.
+- The fan pushes most state changes over the persistent TCP connection, so
+  updates from other clients appear immediately without polling.
 - Adjusting fan speed or light brightness while in AUTO mode automatically
   switches the mode to ON, matching the behaviour of the official app.
 - Nightlight color presets map the known Android app colors (Red, Orange,
   Yellow, Green, Teal, Purple, Pink) to their raw protocol values. Three
   additional raw values (3, 7, 10) are exposed for experimentation.
+- Smart Mix speed changes are accepted by the fan. The BAF Android app may
+  not reflect them until it is restarted; this appears to be a limitation
+  of the app rather than the firmware.
 - Light and Nightlight tabs are hidden if the connected fan does not report
   the corresponding capabilities.

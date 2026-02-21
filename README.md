@@ -9,8 +9,8 @@ includes i6 fans and Haiku fans with the 3.0 firmware.
 
 It supports almost all the features of the previous protocol ("SenseMe"), with
 the exception of rooms, and sleep mode. Occupancy support was added in the 3.1
-firmware. Uplight capability detection and nightlight control are supported for
-Haiku H/I Series fans with an uplight module.
+firmware. Uplight capability detection, nightlight control, and Smart Mix
+(unoccupied behavior) are supported for Haiku H/I Series fans.
 
 ## Command line
 

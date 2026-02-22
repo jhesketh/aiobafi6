@@ -602,6 +602,47 @@ class Device:
         min_api_version=OCCUPANCY_MIN_API_VERSION
     )
 
+    # Smart Mix (unoccupied behavior)
+
+    @property
+    def has_smart_mix(self) -> bool:
+        """Whether the device has reported smart mix / unoccupied behavior properties."""
+        return self._properties.HasField("smart_mix")
+
+    @property
+    def smart_mix_enable(self) -> t.Optional[bool]:  # pylint: disable=missing-function-docstring
+        if not self._properties.HasField("smart_mix"):
+            return None
+        # In proto2 the default for an unset bool is False, which correctly
+        # represents "Turn Off" (the fan omits this field in that mode).
+        return self._properties.smart_mix.smart_mix_enable
+
+    @smart_mix_enable.setter
+    def smart_mix_enable(self, value: bool) -> None:
+        props = self._smart_mix_props()
+        props.smart_mix.smart_mix_enable = value
+        self._commit_property(props)
+
+    @property
+    def smart_mix_speed(self) -> t.Optional[int]:  # pylint: disable=missing-function-docstring
+        if not self._properties.HasField("smart_mix"):
+            return None
+        return maybe_proto_field(self._properties.smart_mix, "speed")
+
+    @smart_mix_speed.setter
+    def smart_mix_speed(self, value: int) -> None:
+        props = self._smart_mix_props()
+        props.smart_mix.smart_mix_enable = True
+        props.smart_mix.speed = value
+        self._commit_property(props)
+
+    def _smart_mix_props(self) -> aiobafi6_pb2.Properties:
+        """Build a Properties with the current smart mix state pre-populated."""
+        props = aiobafi6_pb2.Properties()
+        if self._properties.HasField("smart_mix"):
+            props.smart_mix.CopyFrom(self._properties.smart_mix)
+        return props
+
     # Sensors
 
     temperature = ProtoProp[float](
